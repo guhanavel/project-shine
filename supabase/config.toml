@@ -1,0 +1,39 @@
+project_id = "pcanbeljcqcksaxorfqh"
+
+[api]
+enabled = true
+port = 64321
+
+[db]
+port = 64322
+shadow_port = 64320
+
+[db.pooler]
+port = 64329
+
+[studio]
+enabled = true
+port = 64323
+
+[local_smtp]
+enabled = true
+port = 64324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[storage.buckets.characters]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png"]
+objects_path = "../src/assets/characters"
+
+[storage.buckets.phonics-audio]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["audio/wav", "audio/wave", "audio/x-wav", "audio/mpeg", "audio/mp3"]
+objects_path = "../src/assets/audio"
+
+[analytics]
+enabled = false
