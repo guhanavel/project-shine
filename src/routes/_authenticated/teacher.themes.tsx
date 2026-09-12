@@ -465,8 +465,8 @@ function CreateThemeDialog({ onClose, onCreated }: { onClose: () => void; onCrea
       const { error: e2 } = await supabase.from("theme_items").insert(rows);
       if (e2) throw e2;
       onCreated();
-    } catch (e: any) {
-      setErr(e?.message ?? "Could not create theme");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not create theme");
     } finally {
       setBusy(false);
     }

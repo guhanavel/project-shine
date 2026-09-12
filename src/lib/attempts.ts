@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 const ACTIVE_CHILD_KEY = "shine.activeChildId";
 
@@ -28,7 +29,7 @@ export async function logAttempt(a: LogAttempt): Promise<void> {
       _latency_ms: a.latencyMs ?? undefined,
       _hints_used: a.hintsUsed ?? 0,
       _transcript: a.transcript ?? undefined,
-      _meta: (a.meta ?? {}) as any,
+      _meta: (a.meta ?? {}) as Json,
     });
   } catch {
     // Ignore — logging must never break the child journey.

@@ -55,8 +55,8 @@ function AuthPage() {
       const { data } = await supabase.auth.getSession();
       if (data.session) goHome();
       else setErr("Check your email to confirm your account, then sign in.");
-    } catch (e: any) {
-      setErr(e?.message ?? "Something went wrong");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setBusy(false);
     }
@@ -72,8 +72,8 @@ function AuthPage() {
       });
       if (error) throw error;
       // Browser is redirecting to Google now.
-    } catch (e: any) {
-      setErr(e?.message ?? "Google sign-in failed");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Google sign-in failed");
       setBusy(false);
     }
   }

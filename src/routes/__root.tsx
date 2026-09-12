@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -131,6 +131,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const authSubRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -142,13 +143,11 @@ function RootComponent() {
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       });
-      // Store on window so we can unsubscribe on cleanup
-      (window as any).__shineAuthSub = sub;
+      authSubRef.current = sub.subscription;
     });
     return () => {
       mounted = false;
-      const sub = (window as any).__shineAuthSub;
-      if (sub?.subscription?.unsubscribe) sub.subscription.unsubscribe();
+      authSubRef.current?.unsubscribe();
     };
   }, [router, queryClient]);
 

@@ -88,7 +88,9 @@ export function saveCharacter(id: CharacterId) {
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(STORAGE_KEY, id);
-    } catch {}
+    } catch {
+      // Ignore — storage may be unavailable (private mode, quota, etc.).
+    }
   }
 }
 
@@ -97,6 +99,8 @@ export function loadCharacter(): CharacterId | null {
   try {
     const v = window.localStorage.getItem(STORAGE_KEY);
     if (v && v in CHARACTERS) return v as CharacterId;
-  } catch {}
+  } catch {
+    // Ignore — storage may be unavailable (private mode, quota, etc.).
+  }
   return null;
 }

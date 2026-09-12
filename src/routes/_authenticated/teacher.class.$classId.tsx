@@ -107,7 +107,7 @@ function ClassPage() {
       qc.invalidateQueries({ queryKey: ["class-roster", classId] });
       qc.invalidateQueries({ queryKey: ["teacher-roster"] });
     },
-    onError: (e: any) => setCreateErr(e?.message ?? "Could not create child"),
+    onError: (e: Error) => setCreateErr(e?.message ?? "Could not create child"),
   });
 
   const addByCode = useMutation({
@@ -132,7 +132,7 @@ function ClassPage() {
       qc.invalidateQueries({ queryKey: ["class-roster", classId] });
       qc.invalidateQueries({ queryKey: ["teacher-roster"] });
     },
-    onError: (e: any) => setAddErr(e?.message ?? "Could not add child"),
+    onError: (e: Error) => setAddErr(e?.message ?? "Could not add child"),
   });
 
   const removeChild = useMutation({

@@ -43,7 +43,9 @@ function PronouncePage() {
         if (cancelled) return;
         refEnvRef.current = env;
         if (refCanvasRef.current) drawEnvelope(refCanvasRef.current, env, "#14b8a6");
-      } catch {}
+      } catch {
+        // Ignore — reference envelope is a visual aid, not required for scoring.
+      }
     })();
     return () => {
       cancelled = true;
@@ -124,7 +126,8 @@ function PronouncePage() {
 
   const handleMic = () => {
     if (busy) return;
-    recording ? stopRecording() : startRecording();
+    if (recording) stopRecording();
+    else startRecording();
   };
 
   return (
