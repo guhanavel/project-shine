@@ -13,7 +13,7 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
   const url = apiUrl(endpoint);
   const res = await fetch(url, {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(options?.headers || {}),
     },
     ...options,
@@ -28,5 +28,5 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
 }
 
 export const checkBackendHealth = async () => {
-  return apiRequest<{ status: string; service: string }>('/health');
+  return apiRequest<{ status: string; service: string }>("/health");
 };

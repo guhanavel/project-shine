@@ -41,14 +41,14 @@ function JoinCodeGate() {
         {
           method: "POST",
           body: JSON.stringify({ join_code: clean }),
-        }
+        },
       );
-      
+
       if (!response.success || !response.child?.id) {
         setError("We couldn't find that code. Ask your teacher!");
         return;
       }
-      
+
       localStorage.setItem(ACTIVE_CHILD_KEY, response.child.id);
       localStorage.setItem(ACTIVE_CHILD_NAME_KEY, response.child.name ?? "");
       navigate({ to: "/child/buddy" });
