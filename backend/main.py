@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.v1 import attempts, children, teacher
+from api.v1 import attempts, children, students, teacher
 
 app = FastAPI(
     title="Shineworld API",
@@ -26,6 +26,7 @@ app.add_middleware(
 # Include routers from v1 API
 app.include_router(attempts.router, prefix="/api/v1")
 app.include_router(children.router, prefix="/api/v1")
+app.include_router(students.router, prefix="/api/v1")
 app.include_router(teacher.router, prefix="/api/v1")
 
 @app.get("/health", tags=["System"])
