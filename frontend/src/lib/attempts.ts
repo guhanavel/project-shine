@@ -1,5 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import { apiRequest } from "./api";
 
 const ACTIVE_CHILD_KEY = "shine.activeChildId";
 
@@ -17,19 +16,24 @@ export type LogAttempt = {
   meta?: Record<string, unknown>;
 };
 
-/** Fire-and-forget attempt logging. No-ops when no active child or no auth. */
+/** Fire-and-forget attempt logging via backend API. No-ops when no active child or no auth. */
 export async function logAttempt(a: LogAttempt): Promise<void> {
   try {
     const childId = getActiveChildId();
     if (!childId) return;
-    await supabase.rpc("log_child_attempt", {
-      _child_id: childId,
-      _activity_slug: a.slug,
-      _correct: a.correct,
-      _latency_ms: a.latencyMs ?? undefined,
-      _hints_used: a.hintsUsed ?? 0,
-      _transcript: a.transcript ?? undefined,
-      _meta: (a.meta ?? {}) as Json,
+
+    // Use the backend API endpoint instead of direct Supabase RPC
+    await apiRequest("/api/v1/attempts/log", {
+      method: "POST",
+      body: JSON.stringify({
+        child_id: childId,
+        activity_slug: a.slug,
+        correct: a.correct,
+        latency_ms: a.latencyMs ?? undefined,
+        hints_used: a.hintsUsed ?? 0,
+        transcript: a.transcript ?? undefined,
+        meta: a.meta ?? {},
+      }),
     });
   } catch {
     // Ignore — logging must never break the child journey.
