@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ChildHeader } from "@/components/ChildHeader";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 const ACTIVE_CHILD_KEY = "shine.activeChildId";
 const ACTIVE_CHILD_NAME_KEY = "shine.activeChildName";
@@ -35,15 +35,22 @@ function JoinCodeGate() {
     }
     setBusy(true);
     try {
-      const { data, error } = await supabase.rpc("resolve_child_by_join_code", { _code: clean });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row?.id) {
+      // Use backend API endpoint instead of direct Supabase RPC
+      const response = await apiRequest<{ child: { id: string; name: string }; success: boolean }>(
+        "/api/v1/children/resolve-by-code",
+        {
+          method: "POST",
+          body: JSON.stringify({ join_code: clean }),
+        },
+      );
+
+      if (!response.success || !response.child?.id) {
         setError("We couldn't find that code. Ask your teacher!");
         return;
       }
-      localStorage.setItem(ACTIVE_CHILD_KEY, row.id);
-      localStorage.setItem(ACTIVE_CHILD_NAME_KEY, row.name ?? "");
+
+      localStorage.setItem(ACTIVE_CHILD_KEY, response.child.id);
+      localStorage.setItem(ACTIVE_CHILD_NAME_KEY, response.child.name ?? "");
       navigate({ to: "/child/buddy" });
     } catch (err) {
       setError((err as Error).message ?? "Something went wrong.");
