@@ -93,6 +93,38 @@ async def test_student_validation_and_not_found(client, supabase_client):
 
 
 @pytest.mark.asyncio
+async def test_create_student_activity_attempt(client, supabase_client):
+    student_id = uuid4()
+    class_id = uuid4()
+    attempt_row = {
+        "id": str(uuid4()),
+        "student_id": str(student_id),
+        "activity_type": "tracing",
+        "completion_score": 0.9,
+        "timestamp": "2026-10-06T00:00:00Z",
+    }
+    supabase_client.table.return_value.execute.side_effect = [
+        SimpleNamespace(data=[{"class_id": str(class_id)}]),
+        SimpleNamespace(data=[{"id": str(class_id)}]),
+        SimpleNamespace(data=[attempt_row]),
+    ]
+
+    response = await client.post(
+        f"/api/v1/students/{student_id}/activity-attempts",
+        json={"activity_type": "tracing", "completion_score": 0.9},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 201
+    assert response.json() == attempt_row
+    assert [call.args[0] for call in supabase_client.table.call_args_list] == [
+        "students",
+        "classes",
+        "student_activity_attempts",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_create_attempt_and_get_progress(client, supabase_client):
     student_id = str(uuid4())
     activity_id = str(uuid4())

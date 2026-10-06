@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/icons/BackArrow";
+import { StudentCreateForm } from "@/components/StudentCreateForm";
 
 export const Route = createFileRoute("/_authenticated/teacher/class/$classId")({
   head: () => ({ meta: [{ title: "Class — Shine" }] }),
@@ -74,41 +75,6 @@ function ClassPage() {
 
   const [code, setCode] = useState("");
   const [addErr, setAddErr] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
-  const [newAge, setNewAge] = useState<number | "">("");
-  const [createErr, setCreateErr] = useState<string | null>(null);
-
-  const createChild = useMutation({
-    mutationFn: async () => {
-      setCreateErr(null);
-      const name = newName.trim();
-      if (!name) throw new Error("Enter a name");
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { data: child, error } = await supabase
-        .from("children")
-        .insert({
-          parent_id: u.user.id,
-          name,
-          age: newAge === "" ? null : Number(newAge),
-          avatar_emoji: "🧒",
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      const { error: e2 } = await supabase
-        .from("class_children")
-        .insert({ class_id: classId, child_id: child.id });
-      if (e2 && !`${e2.message}`.includes("duplicate")) throw e2;
-    },
-    onSuccess: () => {
-      setNewName("");
-      setNewAge("");
-      qc.invalidateQueries({ queryKey: ["class-roster", classId] });
-      qc.invalidateQueries({ queryKey: ["teacher-roster"] });
-    },
-    onError: (e: Error) => setCreateErr(e?.message ?? "Could not create child"),
-  });
 
   const addByCode = useMutation({
     mutationFn: async () => {
@@ -236,55 +202,38 @@ function ClassPage() {
               ))}
             </div>
           </div>
-          <div className="bg-card rounded-3xl p-6 chunky-shadow border-2 border-border/40 space-y-5">
-            <div>
-              <h2 className="text-lg font-bold mb-3">Add a new child</h2>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  className="col-span-2 h-11 px-3 rounded-xl border-2 border-border/60 bg-background"
-                  placeholder="Child's name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-                <input
-                  type="number"
-                  min={2}
-                  max={12}
-                  className="h-11 px-3 rounded-xl border-2 border-border/60 bg-background"
-                  placeholder="Age"
-                  value={newAge}
-                  onChange={(e) => setNewAge(e.target.value === "" ? "" : Number(e.target.value))}
-                />
+          <div className="space-y-6">
+            <StudentCreateForm
+              classId={classId}
+              existingNames={(roster.data ?? []).map((child) => child.name)}
+              onCreated={async () => {
+                await Promise.all([
+                  qc.invalidateQueries({ queryKey: ["class-roster", classId] }),
+                  qc.invalidateQueries({ queryKey: ["teacher-roster"] }),
+                ]);
+              }}
+            />
+            <div className="bg-card rounded-3xl p-6 chunky-shadow border-2 border-border/40">
+              <div>
+                <h3 className="text-sm font-bold mb-2">Or add by join code</h3>
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 h-11 px-3 rounded-xl border-2 border-border/60 bg-background uppercase tracking-widest"
+                    placeholder="ABC123"
+                    value={code}
+                    maxLength={6}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  />
+                  <Button
+                    variant="coral"
+                    onClick={() => addByCode.mutate()}
+                    disabled={addByCode.isPending}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {addErr && <div className="text-xs text-destructive mt-2">{addErr}</div>}
               </div>
-              <Button
-                variant="teal"
-                className="mt-2 w-full"
-                onClick={() => createChild.mutate()}
-                disabled={createChild.isPending || !newName.trim()}
-              >
-                {createChild.isPending ? "Adding…" : "Add child"}
-              </Button>
-              {createErr && <div className="text-xs text-destructive mt-2">{createErr}</div>}
-            </div>
-            <div className="border-t border-border/40 pt-4">
-              <h3 className="text-sm font-bold mb-2">Or add by join code</h3>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 h-11 px-3 rounded-xl border-2 border-border/60 bg-background uppercase tracking-widest"
-                  placeholder="ABC123"
-                  value={code}
-                  maxLength={6}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                />
-                <Button
-                  variant="coral"
-                  onClick={() => addByCode.mutate()}
-                  disabled={addByCode.isPending}
-                >
-                  Add
-                </Button>
-              </div>
-              {addErr && <div className="text-xs text-destructive mt-2">{addErr}</div>}
             </div>
           </div>
         </div>
@@ -295,7 +244,7 @@ function ClassPage() {
             <div className="text-foreground/60 text-sm">Loading…</div>
           ) : (roster.data ?? []).length === 0 ? (
             <div className="text-foreground/60 text-sm">
-              No children in this class yet. Add one with a join code above.
+              No children in this class yet. Add one above or use a join code.
             </div>
           ) : (
             <div className="overflow-x-auto">

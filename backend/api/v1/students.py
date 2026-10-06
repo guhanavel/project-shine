@@ -2,12 +2,17 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import os
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
 from supabase import Client, create_client
 
+from schemas.children import ChildCreate, ChildProfileResponse
 from schemas.activity_attempts import ActivityAttemptCreate, ActivityAttemptResponse
 from schemas.progress import ProgressResponse
-from schemas.students import StudentCreate, StudentResponse
+from schemas.students import (
+    ActivityAttempt as StudentActivityAttempt,
+    ActivityAttemptCreate as StudentActivityAttemptCreate,
+    STUDENT_ACTIVITY_ATTEMPTS_TABLE,
+)
 
 router = APIRouter(tags=["Students"])
 
@@ -26,8 +31,8 @@ def get_token_from_header(authorization: Optional[str]) -> str:
     return authorization.removeprefix("Bearer ")
 
 
-def _student_from_row(row: Dict[str, Any]) -> StudentResponse:
-    return StudentResponse(
+def _student_from_row(row: Dict[str, Any]) -> ChildProfileResponse:
+    return ChildProfileResponse(
         id=row["id"],
         name=row["name"],
         age=row.get("age"),
@@ -36,19 +41,19 @@ def _student_from_row(row: Dict[str, Any]) -> StudentResponse:
     )
 
 
-async def _student_or_404(student_id: UUID, supabase: Client) -> StudentResponse:
+async def _student_or_404(student_id: UUID, supabase: Client) -> ChildProfileResponse:
     response = supabase.table("children").select("*").eq("id", str(student_id)).limit(1).execute()
     if not response.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     return _student_from_row(response.data[0])
 
 
-@router.post("/students", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/students", response_model=ChildProfileResponse, status_code=status.HTTP_201_CREATED)
 async def create_student(
-    request: StudentCreate,
+    request: ChildCreate,
     authorization: Optional[str] = None,
     supabase: Client = Depends(get_supabase),
-) -> StudentResponse:
+) -> ChildProfileResponse:
     token = get_token_from_header(authorization)
     user = supabase.auth.get_user(token)
     if not user.user:
@@ -65,18 +70,67 @@ async def create_student(
     return _student_from_row(response.data[0])
 
 
-@router.get("/students", response_model=List[StudentResponse])
-async def list_students(supabase: Client = Depends(get_supabase)) -> List[StudentResponse]:
+@router.get("/students", response_model=List[ChildProfileResponse])
+async def list_students(supabase: Client = Depends(get_supabase)) -> List[ChildProfileResponse]:
     response = supabase.table("children").select("*").order("created_at").execute()
     return [_student_from_row(row) for row in response.data or []]
 
 
-@router.get("/students/{student_id}", response_model=StudentResponse)
+@router.get("/students/{student_id}", response_model=ChildProfileResponse)
 async def get_student(
     student_id: UUID = Path(),
     supabase: Client = Depends(get_supabase),
-) -> StudentResponse:
+) -> ChildProfileResponse:
     return await _student_or_404(student_id, supabase)
+
+
+@router.post(
+    "/students/{student_id}/activity-attempts",
+    response_model=StudentActivityAttempt,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_student_activity_attempt(
+    student_id: UUID,
+    request: StudentActivityAttemptCreate,
+    authorization: Optional[str] = Header(default=None),
+    supabase: Client = Depends(get_supabase),
+) -> StudentActivityAttempt:
+    token = get_token_from_header(authorization)
+    user = supabase.auth.get_user(token)
+    if not user.user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization token")
+
+    student_result = (
+        supabase.table("students")
+        .select("class_id")
+        .eq("id", str(student_id))
+        .limit(1)
+        .execute()
+    )
+    if not student_result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    class_result = (
+        supabase.table("classes")
+        .select("id")
+        .eq("id", student_result.data[0]["class_id"])
+        .eq("teacher_id", user.user.id)
+        .limit(1)
+        .execute()
+    )
+    if not class_result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    response = supabase.table(STUDENT_ACTIVITY_ATTEMPTS_TABLE).insert(
+        {
+            "student_id": str(student_id),
+            **request.model_dump(),
+        }
+    ).execute()
+    if not response.data:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to record activity attempt")
+
+    return StudentActivityAttempt.model_validate(response.data[0])
 
 
 @router.post(
