@@ -1,21 +1,48 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+STUDENT_ACTIVITY_ATTEMPTS_TABLE = "student_activity_attempts"
 
 
-class StudentCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    age: Optional[int] = Field(default=None, ge=0, le=18)
-    avatar_emoji: Optional[str] = Field(default=None, max_length=16)
+class StudentBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    first_name: str = Field(min_length=1, max_length=100)
+    avatar_id: str = Field(min_length=1)
+
+    # TODO: Add Evaluation Metrics fields here once provided by Wenxuan.
+
+    @field_validator("first_name")
+    @classmethod
+    def first_name_must_not_be_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("first_name must not be blank")
+        return value
 
 
-class StudentResponse(BaseModel):
+class StudentCreate(StudentBase):
+    pass
+
+
+class StudentResponse(StudentBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    name: str
-    age: Optional[int] = None
-    avatar_emoji: Optional[str] = None
+    class_id: UUID
     created_at: datetime
+
+
+class ActivityAttempt(BaseModel):
+    id: UUID
+    student_id: UUID
+    activity_type: str
+    completion_score: float
+    timestamp: datetime
+
+
+class ActivityAttemptCreate(BaseModel):
+    activity_type: str
+    completion_score: float

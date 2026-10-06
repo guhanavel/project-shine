@@ -12,11 +12,11 @@ export function apiUrl(path: string): string {
 export async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = apiUrl(endpoint);
   const res = await fetch(url, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options?.headers || {}),
     },
-    ...options,
   });
 
   if (!res.ok) {
